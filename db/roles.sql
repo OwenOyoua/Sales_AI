@@ -4,7 +4,7 @@ CREATE ROLE ai_sav NOLOGIN;
 CREATE ROLE ai_vendeur NOLOGIN;
 
 -- Compte de connexion du service IA : lecture seule, requêtes limitées à 10 s
-CREATE ROLE ai_login LOGIN PASSWORD 'Test12345!' NOINHERIT;
+CREATE ROLE ai_login LOGIN PASSWORD :'ai_db_password' NOINHERIT;
 GRANT ai_directeur, ai_sav, ai_vendeur TO ai_login;
 ALTER ROLE ai_login SET statement_timeout = '10s';
 ALTER ROLE ai_login SET default_transaction_read_only = on;

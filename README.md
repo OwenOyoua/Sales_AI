@@ -55,6 +55,7 @@ POSTGRES_DB=sales_ai
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=remplacer-par-un-mot-de-passe-de-base-de-donnees
 
+DJANGO_SECRET_KEY=remplacer-par-une-cle-secrete-aleatoire
 AI_DB_PASSWORD=remplacer-par-un-mot-de-passe-pour-le-compte-ia
 AI_INTERNAL_TOKEN=remplacer-par-un-jeton-long-et-aleatoire
 
@@ -62,7 +63,7 @@ NVIDIA_API_KEY=remplacer-par-votre-cle-nvidia
 NVIDIA_MODEL=meta/llama-3.3-70b-instruct
 ```
 
-`POSTGRES_DB`, `POSTGRES_USER` et `POSTGRES_PASSWORD` configurent le compte administrateur de la base utilisé par Django. `AI_DB_PASSWORD` est le mot de passe du compte en lecture seule utilisé par l’API IA. Pour que la connexion fonctionne, la valeur choisie pour `AI_DB_PASSWORD` doit être identique au mot de passe affecté au rôle `ai_login` dans [`db/roles.sql`](./db/roles.sql). Modifiez ce fichier avant de poursuivre si nécessaire.
+`POSTGRES_DB`, `POSTGRES_USER` et `POSTGRES_PASSWORD` configurent le compte administrateur de la base utilisé par Django. `DJANGO_SECRET_KEY` doit être une clé aléatoire privée, différente pour chaque déploiement. `AI_DB_PASSWORD` est le mot de passe du compte en lecture seule utilisé par l’API IA ; le script SQL le reçoit depuis l’environnement lors de son exécution.
 
 `AI_INTERNAL_TOKEN` doit être une valeur secrète identique dans les conteneurs Django et IA ; Docker Compose la transmet aux deux services depuis le même `.env`. `NVIDIA_MODEL` est facultatif et peut être omis pour utiliser le modèle par défaut.
 
@@ -89,10 +90,10 @@ Copiez le script SQL dans le conteneur PostgreSQL, puis exécutez-le :
 
 ```powershell
 docker compose cp .\db\roles.sql postgres:/tmp/roles.sql
-docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/roles.sql'
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ai_db_password="$AI_DB_PASSWORD" -f /tmp/roles.sql'
 ```
 
-Le script crée les rôles de profil et le compte `ai_login`, applique un délai maximal aux requêtes et configure l’accès en lecture seule. Exécutez-le une seule fois sur une base vierge. Si vous avez modifié le mot de passe de `ai_login` dans ce script, reportez exactement la même valeur dans `AI_DB_PASSWORD` du fichier `.env` avant de démarrer le service IA.
+Le script crée les rôles de profil et le compte `ai_login`, applique un délai maximal aux requêtes et configure l’accès en lecture seule. Exécutez-le une seule fois sur une base vierge.
 
 ### 6. Charger les données Olist
 
