@@ -1,0 +1,110 @@
+{% extends "core/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}Tableau de bord{% endblock %}
+{% block topbar_caption %}Les indicateurs clés de votre activité{% endblock %}
+{% block content %}
+<style>
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 13px; margin-bottom: 20px; }
+  .kpi { padding: 17px 18px; }
+  .kpi .l { color: #788196; font-size: 12px; }
+  .kpi .v { margin-top: 7px; color: #253e8c; font-size: 25px; font-weight: 730; letter-spacing: -.04em; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; }
+  .charts h3 { margin: 0 0 15px; font-size: 15px; }
+  .chart-box { position: relative; height: 300px; }
+  .years { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; color: #788196; font-size: 12px; }
+  .years a { padding: 7px 11px; border: 1px solid #e1e6f0; border-radius: 20px; background: #fff; }
+  .years a.active { border-color: #253e8c; background: #253e8c; color: #fff; }
+  .note { color: #788196; font-size: 12px; }
+  .dashboard-table { margin-top: 14px; }
+</style>
+
+<div class="page-heading"><h1>Tableau de bord
+  {% if user.role == "vendeur" %}<small class="note">(vos ventes)</small>{% endif %}
+</h1><p>Un aperçu clair de vos indicateurs et de votre activité récente.</p></div>
+
+{% if kind != "none" %}
+<p class="years">Période :
+  <a href="?" {% if not year %}class="active"{% endif %}>Toutes</a>
+  {% for y in years %}
+    <a href="?year={{ y }}" {% if year == y %}class="active"{% endif %}>{{ y }}</a>
+  {% endfor %}
+</p>
+<p class="note">Données Olist : partielles en 2016 et à partir de septembre 2018.
+  {% if kind == "sav" %}Les tickets ne sont pas filtrés par année.{% endif %}</p>
+
+<div class="kpis">
+  {% for k in kpis %}
+  <div class="kpi"><div class="l">{{ k.label }}</div><div class="v">{{ k.value }}</div></div>
+  {% endfor %}
+</div>
+
+<p id="chart-warning" class="note" hidden>Les graphiques n'ont pas pu se charger (Internet requis pour Chart.js).</p>
+<div class="charts">
+  {% if kind == "sales" %}
+    <div class="card"><h3>Chiffre d'affaires par mois (R$)</h3><div class="chart-box"><canvas id="c-monthly"></canvas></div></div>
+    <div class="card"><h3>Top catégories (R$)</h3><div class="chart-box"><canvas id="c-categories"></canvas></div></div>
+  {% else %}
+    <div class="card"><h3>Tickets par statut</h3><div class="chart-box"><canvas id="c-tickets"></canvas></div></div>
+    <div class="card"><h3>Répartition des notes</h3><div class="chart-box"><canvas id="c-scores"></canvas></div></div>
+  {% endif %}
+</div>
+{{ charts|json_script:"charts-data" }}
+{% elif user.role == "vendeur" %}
+<div class="card">Votre compte n'est lié à aucun vendeur. Contactez un administrateur.</div>
+{% endif %}
+
+{% if ai %}
+<h3>Usage de l'assistant IA</h3>
+<div class="kpis">
+  {% for k in ai.kpis %}
+  <div class="kpi"><div class="l">{{ k.label }}</div><div class="v">{{ k.value }}</div></div>
+  {% endfor %}
+</div>
+<h4>Questions à examiner (👎, échecs ou refus)</h4>
+<div class="table-wrap dashboard-table"><table>
+  <tr><th>Date</th><th>Utilisateur</th><th>Question</th><th>Statut</th><th>Avis</th></tr>
+  {% for b in ai.to_review %}
+  <tr>
+    <td>{{ b.created_at|date:"d/m H:i" }}</td>
+    <td>{{ b.user|default:"Nothings" }}</td>
+    <td>{{ b.question }}</td>
+    <td>{{ b.status }}</td>
+    <td>{% if b.feedback == -1 %}👎{% elif b.feedback == 1 %}👍{% else %}:{% endif %}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="5">Rien à signaler.</td></tr>
+  {% endfor %}
+</table></div>
+<p class="note">Les détails (SQL généré, résultat) sont dans l'admin, rubrique « Query logs ».</p>
+{% endif %}
+
+{% if kind != "none" %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (typeof Chart === "undefined") {
+    document.getElementById("chart-warning").hidden = false;
+    return;
+  }
+  const d = JSON.parse(document.getElementById("charts-data").textContent);
+  const grid = {maintainAspectRatio: false, plugins: {legend: {display: false}}};
+
+  function draw(id, type, c, label, color, extra) {
+    const canvas = document.getElementById(id);
+    if (!canvas || !c) return;
+    new Chart(canvas, {
+      type: type,
+      data: {labels: c.labels, datasets: [{label: label, data: c.values,
+             backgroundColor: color + "55", borderColor: color, borderWidth: 2,
+             fill: type === "line", tension: 0.25}]},
+      options: Object.assign({}, grid, extra || {}),
+    });
+  }
+  draw("c-monthly", "line", d.monthly, "CA (R$)", "#2563eb");
+  draw("c-categories", "bar", d.categories, "CA (R$)", "#059669", {indexAxis: "y"});
+  draw("c-tickets", "bar", d.tickets, "Tickets", "#d97706");
+  draw("c-scores", "bar", d.scores, "Avis", "#7c3aed");
+})();
+</script>
+{% endif %}
+{% endblock %}

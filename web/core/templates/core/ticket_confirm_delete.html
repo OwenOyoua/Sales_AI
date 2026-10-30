@@ -1,0 +1,15 @@
+{% extends "core/base.html" %}
+{% block title %}Supprimer le ticket{% endblock %}
+{% block topbar_title %}Supprimer un ticket{% endblock %}
+{% block topbar_caption %}Confirmation de suppression{% endblock %}
+{% block content %}
+<div class="page-heading"><h1>Supprimer le ticket #{{ ticket.pk }} ?</h1><p>Cette action supprimera définitivement la demande.</p></div>
+<div class="card form-card">
+  <p style="margin-top:0; color:#475268;">{{ ticket.subject }}</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" style="background:#a3344b;">Oui, supprimer</button>
+    <a class="button" style="margin-left:8px; background:#eef1f7; color:#354158;" href="{% url 'ticket_detail' ticket.pk %}">Annuler</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,238 @@
+{% extends "core/base.html" %}
+{% block title %}Assistant IA{% endblock %}
+{% block topbar_title %}Assistant IA{% endblock %}
+{% block topbar_caption %}Interrogez vos données commerciales en langage naturel{% endblock %}
+{% block content %}
+<style>
+  .chat-page { max-width: 1200px; }
+  .chat-heading { margin-bottom: 19px; }
+  .chat-heading h1 { margin: 0; color: #18233a; font-size: 27px; letter-spacing: -.04em; }
+  .chat-heading p { margin: 6px 0 0; color: #788196; font-size: 13px; }
+  .chat-workspace { display: grid; min-height: 535px; flex: 1; grid-template-columns: minmax(0, 1fr) 240px; overflow: hidden; border: 1px solid #dfe6f2; border-radius: 19px; background: #fff; box-shadow: 0 14px 38px rgba(25,39,69,.1); }
+  .main-area:has(.chat-workspace) > main { display: flex; flex: 1; flex-direction: column; padding-bottom: 8px; }
+  .chat-conversation { display: flex; min-width: 0; flex-direction: column; padding: 22px; background: linear-gradient(150deg, #fafdff 0%, #f0f5fc 100%); }
+  .conversation-header { display: flex; align-items: center; gap: 11px; padding-bottom: 16px; border-bottom: 1px solid #e3eaf4; }
+  .assistant-mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: #253e8c; box-shadow: 0 5px 12px rgba(37,62,140,.24); color: #fff; font-size: 12px; font-weight: 800; }
+  .assistant-title { color: #24324c; font-size: 13px; font-weight: 750; }
+  .assistant-subtitle { margin-top: 3px; color: #8993a8; font-size: 11px; }
+  .assistant-online { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: #6e7c91; font-size: 10px; }
+  .assistant-online:before { width: 7px; height: 7px; border-radius: 50%; background: #38a879; content: ""; }
+  .conversation-content { display: flex; min-height: 0; flex: 1; flex-direction: column; justify-content: flex-end; overflow-y: auto; padding: 26px 4px 19px; }
+  .welcome-message { max-width: 440px; padding: 14px 16px; border: 1px solid #e5ebf4; border-radius: 4px 14px 14px 14px; background: #fff; box-shadow: 0 4px 12px rgba(25,39,69,.04); color: #4f5c73; font-size: 13px; line-height: 1.6; }
+  .welcome-message strong { display: block; margin-bottom: 4px; color: #263a6d; }
+  #result:empty { display: none; }
+  #result .card { margin: 14px 0 0; padding: 15px; border-color: #e3eaf4; border-radius: 13px; box-shadow: 0 4px 12px rgba(25,39,69,.05); font-size: 13px; line-height: 1.65; }
+  #result .card table { min-width: 540px; }
+  #result pre { overflow-x: auto; padding: 13px; border-radius: 8px; background: #f5f7fb; font-size: 11px; }
+  #result details { margin-top: 12px; color: #53617a; font-size: 12px; }
+  #result summary { cursor: pointer; font-weight: 650; }
+  #result button { margin: 12px 6px 0 0; }
+  .chat-composer { display: flex; align-items: center; gap: 9px; padding: 8px; border: 1px solid #dce5f2; border-radius: 14px; background: #fff; box-shadow: 0 5px 16px rgba(25,39,69,.07); }
+  .chat-composer input { min-width: 0; min-height: 42px; flex: 1; padding: 8px 11px; border: 0; box-shadow: none; font-size: 13px; }
+  .chat-composer input:focus { border: 0; box-shadow: none; }
+  .chat-composer button { min-height: 39px; }
+  .chat-composer #mic { width: 39px; padding: 0; border: 1px solid #e1e7f0; background: #f7f9fc; color: #41516e; font-size: 15px; }
+  .chat-composer #mic:hover { background: #edf2fa; }
+  .chat-composer #send { padding: 9px 17px; }
+  #mic-status { min-height: 16px; margin: 7px 4px 0; color: #788196; font-size: 11px; }
+  .composer-hint { margin: 7px 4px 0; color: #9aa2b1; font-size: 10px; }
+  .chat-suggestions { padding: 25px 18px; border-left: 1px solid #e7edf5; background: #fff; }
+  .suggestion-kicker { margin: 0 0 6px; color: #536be0; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .chat-suggestions h2 { margin: 0 0 7px; color: #25324a; font-size: 16px; letter-spacing: -.03em; }
+  .suggestion-intro { margin: 0 0 19px; color: #8993a6; font-size: 11px; line-height: 1.5; }
+  .history-list { display: grid; gap: 8px; max-height: 390px; overflow-y: auto; }
+  .history-item { display: block; width: 100%; min-height: 0; padding: 10px; border: 1px solid #e8edf5; border-radius: 9px; background: #fff; color: #58657b; text-align: left; cursor: pointer; }
+  .history-item:hover { border-color: #b9c7ef; background: #f8faff; }
+  .history-question { display: -webkit-box; overflow: hidden; color: #46536b; font-size: 11px; font-weight: 600; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .history-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 8px; color: #99a1b0; font-size: 9px; }
+  .history-status { padding: 3px 6px; border-radius: 10px; background: #eef1f8; color: #68758d; font-weight: 700; }
+  .history-ok { background: #e8f6ef; color: #28744e; }
+  .history-error, .history-impossible { background: #fff0f0; color: #a34242; }
+  .history-empty { margin: 0; padding: 14px 11px; border: 1px dashed #dce4ef; border-radius: 9px; color: #8993a6; font-size: 11px; line-height: 1.5; }
+  @media (max-width: 800px) { .chat-workspace { grid-template-columns: minmax(0,1fr) 205px; } .chat-conversation { padding: 17px; } .chat-suggestions { padding: 21px 14px; } }
+  @media (max-width: 620px) { .chat-workspace { grid-template-columns: 1fr; } .chat-suggestions { border-top: 1px solid #e7edf5; border-left: 0; padding: 17px; } .history-list { max-height: 260px; } .chat-conversation { min-height: 390px; } }
+  @media (max-width: 420px) { .chat-composer { flex-wrap: wrap; } .chat-composer input { flex-basis: calc(100% - 50px); } .chat-composer #send { flex: 1; } }
+</style>
+<div class="page-heading chat-heading"><h1>Assistant IA</h1><p>Posez vos questions sur les ventes et obtenez une analyse immédiate.</p></div>
+<section class="chat-workspace" aria-label="Assistant conversationnel Sales AI">
+  <div class="chat-conversation">
+    <div class="conversation-header">
+      <div class="assistant-mark" aria-hidden="true">AI</div>
+      <div><div class="assistant-title">Assistant Sales AI</div><div class="assistant-subtitle">Analyse de vos données commerciales</div></div>
+      <span class="assistant-online">Disponible</span>
+    </div>
+    <div class="conversation-content" id="conversation-content">
+      <div class="welcome-message"><strong>Bonjour {{ user.username }} !</strong>Posez une question sur vos ventes. Je peux vous aider à explorer les commandes, les tendances et les résultats.</div>
+      <div id="result"></div>
+    </div>
+    <form id="ask-form" class="chat-composer">
+      <input id="question" maxlength="500" placeholder="Écrivez votre question…" autocomplete="off" aria-label="Votre question">
+      <button id="mic" type="button" title="Dicter la question" aria-label="Dicter la question">🎤</button>
+      <button id="send" type="submit">Envoyer</button>
+    </form>
+    <small id="mic-status" aria-live="polite"></small>
+    <p class="composer-hint">Les réponses s’appuient sur les données disponibles dans l’application.</p>
+  </div>
+  <aside class="chat-suggestions chat-history">
+    <p class="suggestion-kicker">Vos échanges</p>
+    <h2>Historique</h2>
+    <p class="suggestion-intro">Vos dernières questions. Cliquez sur un échange pour le reprendre.</p>
+    <div class="history-list">
+      {% for h in history %}
+      <button class="history-item" type="button" data-question="{{ h.question }}" title="Reprendre cette question">
+        <span class="history-question">{{ h.question }}</span>
+        <span class="history-meta"><time>{{ h.created_at|date:"d/m H:i" }}</time><span class="history-status history-{{ h.status }}">{{ h.status }}</span></span>
+      </button>
+      {% empty %}
+      <p class="history-empty">Vos questions récentes apparaîtront ici.</p>
+      {% endfor %}
+    </div>
+  </aside>
+</section>
+
+
+<script>
+const csrf = "{{ csrf_token }}";
+const form = document.getElementById("ask-form");
+const input = document.getElementById("question");
+const send = document.getElementById("send");
+const result = document.getElementById("result");
+
+document.querySelectorAll("[data-question]").forEach((suggestion) => {
+  suggestion.addEventListener("click", () => {
+    input.value = suggestion.dataset.question;
+    input.focus();
+  });
+});
+
+function el(tag, text, cls) {
+  const e = document.createElement(tag);
+  if (text !== undefined) e.textContent = text;
+  if (cls) e.className = cls;
+  return e;
+}
+
+function post(url, body) {
+  return fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
+    body: JSON.stringify(body),
+  });
+}
+
+function render(p) {
+  result.replaceChildren();
+  const card = el("div", undefined, "card");
+  card.appendChild(el("p", p.answer || p.error || "Erreur."));
+
+  if (p.columns && p.columns.length) {
+    const wrap = el("div"); wrap.style.overflowX = "auto";
+    const t = el("table");
+    const head = el("tr");
+    p.columns.forEach(c => head.appendChild(el("th", c)));
+    t.appendChild(head);
+    p.rows.slice(0, 50).forEach(r => {
+      const tr = el("tr");
+      r.forEach(v => tr.appendChild(el("td", v === null ? "Nothings" : String(v))));
+      t.appendChild(tr);
+    });
+    wrap.appendChild(t);
+    card.appendChild(wrap);
+    if (p.rows.length > 50) card.appendChild(el("p", "Affichage des 50 premières lignes sur " + p.rows.length + "."));
+  }
+
+  if (p.sql) {
+    const d = el("details");
+    d.appendChild(el("summary", "Voir la requête SQL"));
+    d.appendChild(el("pre", p.sql));
+    card.appendChild(d);
+  }
+
+  if (p.log_id) {
+    const fb = el("div");
+    const status = el("span", "");
+    ["👍", "👎"].forEach((icon, i) => {
+      const b = el("button", icon);
+      b.type = "button";
+      b.onclick = async () => {
+        const r = await post("/chat/feedback/" + p.log_id + "/", {value: i === 0 ? 1 : -1});
+        status.textContent = r.ok ? " Merci !" : " Échec de l'envoi.";
+      };
+      fb.appendChild(b);
+    });
+    fb.appendChild(status);
+    card.appendChild(fb);
+  }
+  result.appendChild(card);
+  document.getElementById("conversation-content").scrollTop = document.getElementById("conversation-content").scrollHeight;
+}
+
+// ---------- Dictée vocale ----------
+const mic = document.getElementById("mic");
+const micStatus = document.getElementById("mic-status");
+let viaVoice = false;
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) {
+  mic.disabled = true;
+  micStatus.textContent = "Dictée non disponible sur ce navigateur (utilisez Chrome ou Edge).";
+} else {
+  const rec = new SR();
+  rec.lang = "fr-FR";
+  rec.interimResults = true;
+  rec.continuous = false;
+  let listening = false;
+  let base = "";
+
+  const MIC_ERRORS = {
+    "not-allowed": "Accès au micro refusé. Autorisez-le dans la barre d'adresse du navigateur.",
+    "service-not-allowed": "Accès au micro refusé. Autorisez-le dans la barre d'adresse du navigateur.",
+    "no-speech": "Aucune voix détectée, réessayez.",
+    "audio-capture": "Aucun micro détecté.",
+    "network": "Erreur réseau : la dictée a besoin d'une connexion Internet.",
+  };
+
+  mic.addEventListener("click", () => {
+    if (listening) { rec.stop(); return; }
+    base = input.value.trim() ? input.value.trim() + " " : "";
+    micStatus.textContent = "";
+    try { rec.start(); } catch (e) { /* déjà démarré */ }
+  });
+
+  rec.onstart = () => { listening = true; mic.textContent = "⏹"; micStatus.textContent = "Je vous écoute… (cliquez pour arrêter)"; };
+  rec.onresult = (e) => {
+    let text = "";
+    for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+    input.value = (base + text).slice(0, 500);
+    viaVoice = true;
+  };
+  rec.onerror = (e) => { micStatus.textContent = MIC_ERRORS[e.error] || ("Erreur de dictée : " + e.error); };
+  rec.onend = () => {
+    listening = false; mic.textContent = "🎤";
+    if (input.value && !micStatus.textContent.startsWith("Erreur") && !micStatus.textContent.includes("refusé")) {
+      micStatus.textContent = "Vérifiez le texte, corrigez-le si besoin, puis cliquez sur Envoyer.";
+    }
+    input.focus();
+  };
+}
+
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = input.value.trim();
+  if (q.length < 3) return;
+  send.disabled = true; send.textContent = "Réflexion...";
+  result.replaceChildren(el("p", "Analyse de la question en cours..."));
+  try {
+      const r = await post("/chat/ask/", {question: q, via_voice: viaVoice});
+    render(await r.json());
+  } catch (err) {
+    render({answer: "Erreur réseau, réessayez."});
+  } finally {
+    viaVoice = false;
+    send.disabled = false; send.textContent = "Envoyer";
+  }
+  
+});
+</script>
+{% endblock %}

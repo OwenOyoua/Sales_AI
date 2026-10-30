@@ -1,0 +1,43 @@
+{% extends "core/base.html" %}
+{% block title %}Commande {{ order.order_id|slice:":8" }}{% endblock %}
+{% block topbar_title %}Détail de la commande{% endblock %}
+{% block topbar_caption %}Informations client, articles et paiement{% endblock %}
+{% block content %}
+<p><a class="back-link" href="{% url 'orders' %}">← Retour aux commandes</a></p>
+<div class="page-heading"><h1>Commande {{ order.order_id|slice:":8" }}…</h1><p>Résumé de la commande et détail des articles</p></div>
+
+<div class="card">
+  <div class="detail-grid">
+    <div class="detail-item"><span class="detail-label">Statut</span><span class="detail-value">{{ order.status }}</span></div>
+    <div class="detail-item"><span class="detail-label">Date d’achat</span><span class="detail-value">{{ order.purchased_at|date:"d/m/Y H:i"|default:"Nothings" }}</span></div>
+    <div class="detail-item"><span class="detail-label">Livraison</span><span class="detail-value">{{ order.delivered_at|date:"d/m/Y"|default:"Nothings" }}</span></div>
+    <div class="detail-item"><span class="detail-label">Ville du client</span><span class="detail-value">{{ order.customer.city }} ({{ order.customer.state }})</span></div>
+  </div>
+</div>
+
+<h3>Articles</h3>
+<div class="table-wrap"><table>
+  <tr><th>#</th><th>Produit</th><th>Catégorie</th><th>Vendeur</th><th>Prix</th><th>Port</th></tr>
+  {% for i in items %}
+  <tr>
+    <td>{{ i.item_number }}</td>
+    <td>{{ i.product.product_id|slice:":8" }}…</td>
+    <td>{{ i.product.category_en }}</td>
+    <td>{{ i.seller.seller_id|slice:":8" }}…</td>
+    <td>{{ i.price }}</td>
+    <td>{{ i.freight_value }}</td>
+  </tr>
+  {% endfor %}
+</table></div>
+<p style="margin:16px 4px 24px; color:#253e8c; font-size:17px; text-align:right;"><strong>Total : {{ total }}</strong></p>
+
+{% if user.role != "vendeur" %}
+<h3>Paiements</h3>
+<div class="table-wrap"><table>
+  <tr><th>Type</th><th>Échéances</th><th>Montant</th></tr>
+  {% for p in order.payments.all %}
+  <tr><td>{{ p.payment_type }}</td><td>{{ p.installments }}</td><td>{{ p.value }}</td></tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

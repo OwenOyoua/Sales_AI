@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}Ticket #{{ ticket.pk }}{% endblock %}
+{% block topbar_title %}Détail du ticket{% endblock %}
+{% block topbar_caption %}Consultez les informations et le suivi de la demande{% endblock %}
+{% block content %}
+<p><a class="back-link" href="{% url 'tickets' %}">← Retour aux tickets</a></p>
+<div class="page-heading"><h1>#{{ ticket.pk }} · {{ ticket.subject }}</h1><p>Créé le {{ ticket.created_at|date:"d/m/Y à H:i" }}</p></div>
+
+<div class="card">
+  <div class="detail-grid">
+    <div class="detail-item"><span class="detail-label">Statut</span><span class="detail-value">{{ ticket.get_status_display }}</span></div>
+    <div class="detail-item"><span class="detail-label">Priorité</span><span class="detail-value">{{ ticket.get_priority_display }}</span></div>
+    <div class="detail-item"><span class="detail-label">Créé par</span><span class="detail-value">{{ ticket.created_by|default:"Nothings" }}</span></div>
+    <div class="detail-item"><span class="detail-label">Assigné à</span><span class="detail-value">{{ ticket.assigned_to|default:"Nothings" }}</span></div>
+    <div class="detail-item"><span class="detail-label">Commande liée</span><span class="detail-value">{% if ticket.order %}<a href="{% url 'order_detail' ticket.order.order_id %}">{{ ticket.order.order_id }}</a>{% else %}Nothings{% endif %}</span></div>
+  </div>
+  {% if ticket.description %}<div style="margin-top:20px; color:#475268; line-height:1.7;">{{ ticket.description|linebreaksbr }}</div>{% endif %}
+</div>
+
+{% if user.role == "admin" or user.role == "sav" %}<a class="button" href="{% url 'ticket_edit' ticket.pk %}">Modifier le ticket</a>{% endif %}
+{% if user.role == "admin" %}<a class="button" style="margin-left:8px; background:#a3344b;" href="{% url 'ticket_delete' ticket.pk %}">Supprimer</a>{% endif %}
+{% endblock %}

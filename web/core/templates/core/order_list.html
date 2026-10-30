@@ -1,0 +1,102 @@
+{% extends "core/base.html" %}
+{% block title %}Commandes{% endblock %}
+{% block topbar_title %}Commandes{% endblock %}
+{% block topbar_caption %}Consultez et suivez les commandes clients{% endblock %}
+{% block content %}
+<style>
+  .app-shell:has(.orders-page) { height: 100vh; min-height: 0; }
+  .app-shell:has(.orders-page) .main-area { height: 100vh; min-height: 0; overflow: hidden; }
+  .main-area:has(.orders-page) > main { display: flex; min-height: 0; flex: 1; flex-direction: column; padding-bottom: 10px; }
+  .orders-page { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+  .orders-heading { margin-bottom: 17px; }
+  .orders-heading h1 { margin: 0; color: #18233a; font-size: 27px; letter-spacing: -.04em; }
+  .orders-heading p { margin: 6px 0 0; color: #788196; font-size: 13px; }
+  .orders-filters { flex: 0 0 auto; }
+  .orders-table { min-height: 0; flex: 1; overflow: auto; scrollbar-width: thin; scrollbar-color: #b8c4dd #f3f5f9; }
+  .orders-table table { min-width: 700px; }
+  .orders-table thead th, .orders-table > table > tbody > tr:first-child th { position: sticky; top: 0; z-index: 1; }
+  .orders-pagination { display: flex; min-height: 58px; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; margin-top: 13px; padding: 9px 12px; border: 1px solid #e9edf3; border-radius: 12px; background: #fff; box-shadow: 0 5px 16px rgba(25,39,69,.05); }
+  .pagination-summary { color: #788196; font-size: 11px; white-space: nowrap; }
+  .pagination-pages { display: flex; align-items: center; gap: 5px; }
+  .pagination-link, .pagination-current, .pagination-dots { display: inline-grid; min-width: 31px; height: 31px; place-items: center; border-radius: 7px; font-size: 11px; }
+  .pagination-link { border: 1px solid #e7ebf2; background: #fff; color: #526078; font-weight: 650; }
+  .pagination-link:hover { border-color: #bac8ed; background: #f6f8ff; color: #253e8c; }
+  .pagination-current { background: #253e8c; color: #fff; font-weight: 750; }
+  .pagination-dots { color: #9aa2b1; }
+  .pagination-prev, .pagination-next { padding: 0 11px; }
+  .pagination-disabled { border-color: #edf0f5; background: #f7f8fa; color: #b2b8c4; pointer-events: none; }
+  @media (max-width: 620px) {
+    .orders-page { min-height: 0; }
+    .orders-pagination { flex-wrap: wrap; justify-content: center; padding: 10px; }
+    .pagination-summary { order: 2; width: 100%; text-align: center; }
+    .pagination-pages { gap: 3px; }
+    .pagination-link, .pagination-current, .pagination-dots { min-width: 29px; height: 29px; }
+  }
+</style>
+<section class="orders-page">
+  <div class="page-heading orders-heading"><h1>Commandes</h1><p>{{ page_obj.paginator.count }} commande{{ page_obj.paginator.count|pluralize }} dans votre espace</p></div>
+
+  <form class="filters orders-filters" method="get">
+    <input name="q" placeholder="Début de l’ID commande" value="{{ request.GET.q }}" aria-label="Rechercher par début d'identifiant">
+    <select name="status" aria-label="Filtrer par statut">
+      <option value="">Tous les statuts</option>
+      {% for s in statuses %}
+        <option value="{{ s }}" {% if request.GET.status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filtrer</button>
+    {% if user.role == "vendeur" and user.seller_id %}
+      <a class="button" href="{% url 'order_new' %}">+ Ajouter une commande</a>
+    {% endif %}
+  </form>
+
+  <div class="table-wrap orders-table"><table>
+    <thead><tr><th>Commande</th><th>Statut</th><th>Date d'achat</th><th>Ville client</th></tr></thead>
+    <tbody>
+    {% for o in object_list %}
+    <tr>
+      <td><a href="{% url 'order_detail' o.order_id %}">{{ o.order_id|slice:":8" }}…</a></td>
+      <td><span class="status-pill {% if o.status == 'delivered' or o.status == 'shipped' %}status-positive{% elif o.status == 'canceled' or o.status == 'unavailable' %}status-negative{% elif o.status == 'processing' %}status-warning{% endif %}">{{ o.status }}</span></td>
+      <td>{{ o.purchased_at|date:"d/m/Y H:i"|default:"Nothings" }}</td>
+      <td>{{ o.customer.city }} ({{ o.customer.state }})</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">Aucune commande ne correspond à ces filtres.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+
+  <nav class="orders-pagination" aria-label="Pagination des commandes">
+    <span class="pagination-summary">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }} · {{ page_obj.paginator.count }} résultats</span>
+    <div class="pagination-pages">
+      {% if page_obj.has_previous %}
+        <a class="pagination-link pagination-prev" href="?page={{ page_obj.previous_page_number }}&amp;q={{ request.GET.q|urlencode }}&amp;status={{ request.GET.status|urlencode }}" aria-label="Page précédente">← Précédent</a>
+      {% else %}
+        <span class="pagination-link pagination-prev pagination-disabled" aria-disabled="true">← Précédent</span>
+      {% endif %}
+      {% if page_obj.number > 2 %}
+        <a class="pagination-link" href="?page=1&amp;q={{ request.GET.q|urlencode }}&amp;status={{ request.GET.status|urlencode }}">1</a>
+        {% if page_obj.number > 3 %}<span class="pagination-dots">…</span>{% endif %}
+      {% endif %}
+      {% for p in page_obj.paginator.page_range %}
+        {% if p >= page_obj.number|add:"-1" and p <= page_obj.number|add:"1" %}
+          {% if p == page_obj.number %}
+            <span class="pagination-current" aria-current="page">{{ p }}</span>
+          {% else %}
+            <a class="pagination-link" href="?page={{ p }}&amp;q={{ request.GET.q|urlencode }}&amp;status={{ request.GET.status|urlencode }}">{{ p }}</a>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.number < page_obj.paginator.num_pages|add:"-1" %}
+        {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}<span class="pagination-dots">…</span>{% endif %}
+        <a class="pagination-link" href="?page={{ page_obj.paginator.num_pages }}&amp;q={{ request.GET.q|urlencode }}&amp;status={{ request.GET.status|urlencode }}">{{ page_obj.paginator.num_pages }}</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a class="pagination-link pagination-next" href="?page={{ page_obj.next_page_number }}&amp;q={{ request.GET.q|urlencode }}&amp;status={{ request.GET.status|urlencode }}" aria-label="Page suivante">Suivant →</a>
+      {% else %}
+        <span class="pagination-link pagination-next pagination-disabled" aria-disabled="true">Suivant →</span>
+      {% endif %}
+    </div>
+  </nav>
+</section>
+{% endblock %}

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+{% load static %}
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sales AI{% endblock %}</title>
+  <style>
+    :root { --navy: #253e8c; --navy-dark: #1e3478; --blue: #536be0; --ink: #18233a; --muted: #788196; --line: #e6eaf1; --page: #f1f3f7; --white: #fff; --shadow: 0 8px 24px rgba(25,39,69,.07); }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; background: var(--page); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    a { color: var(--navy); text-decoration: none; }
+    a:hover { color: var(--blue); }
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar { position: sticky; top: 0; display: flex; flex: 0 0 248px; flex-direction: column; width: 248px; height: 100vh; padding: 27px 17px 19px; background: linear-gradient(180deg, #263f91 0%, #203875 100%); color: #fff; }
+    .side-brand { display: flex; align-items: center; gap: 11px; margin: 0 8px 32px; color: #fff; font-size: 17px; font-weight: 750; letter-spacing: -.035em; }
+    .side-brand img { width: 39px; height: 39px; padding: 4px; border-radius: 10px; background: #fff; object-fit: contain; }
+    .side-user { display: flex; align-items: center; gap: 11px; margin: 0 4px 29px; padding: 12px 10px; border: 1px solid rgba(255,255,255,.13); border-radius: 12px; background: rgba(255,255,255,.08); }
+    .side-avatar { width: 42px; height: 42px; flex: 0 0 42px; border: 2px solid rgba(255,255,255,.8); border-radius: 50%; background: #fff; object-fit: cover; }
+    .side-user-copy { min-width: 0; }
+    .side-user-name { overflow: hidden; color: #fff; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .side-user-role { margin-top: 3px; color: rgba(255,255,255,.67); font-size: 11px; }
+    .side-label { margin: 0 12px 10px; color: rgba(255,255,255,.49); font-size: 10px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    .side-nav { display: grid; gap: 5px; }
+    .side-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 9px; color: rgba(255,255,255,.77); font-size: 13px; font-weight: 550; transition: background .16s, color .16s; }
+    .side-nav a:hover, .side-nav a.active { background: rgba(255,255,255,.15); color: #fff; }
+    .nav-icon { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 7px; background: rgba(255,255,255,.11); color: #fff; font-size: 10px; font-weight: 750; }
+    .side-spacer { flex: 1; }
+    .side-note { margin: 0 10px 15px; color: rgba(255,255,255,.49); font-size: 11px; line-height: 1.5; }
+    .logout-form { margin: 0; }
+    .logout-button { width: 100%; display: flex; align-items: center; gap: 11px; padding: 11px 12px; border: 1px solid rgba(255,255,255,.17); border-radius: 9px; background: transparent; color: rgba(255,255,255,.82); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+    .logout-button:hover { background: rgba(255,255,255,.12); color: white; }
+    .main-area { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+    .topbar { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 16px; padding: 17px clamp(22px, 4vw, 48px); border-bottom: 1px solid #e8ebf1; background: rgba(255,255,255,.74); }
+    .topbar-title { color: var(--ink); font-size: 15px; font-weight: 700; }
+    .topbar-caption { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .topbar-role { padding: 7px 11px; border: 1px solid #e4e8f3; border-radius: 20px; background: #fff; color: var(--navy); font-size: 11px; font-weight: 650; }
+    main { width: 100%; max-width: 1500px; flex: 1; margin: 0 auto; padding: 31px clamp(22px, 4vw, 48px) 44px; }
+    .page-heading { margin: 0 0 24px; }
+    .page-heading h1, main > h1, main > h2 { margin: 0; color: var(--ink); font-size: clamp(23px, 2.4vw, 29px); font-weight: 730; letter-spacing: -.04em; }
+    .page-heading p { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    main > h2 + p { color: var(--muted); }
+    h3 { color: var(--ink); }
+    .card, .kpi { border: 1px solid #e9edf3; border-radius: 13px; background: var(--white); box-shadow: var(--shadow); }
+    .card { margin-bottom: 18px; padding: 21px; }
+    .card h2, .card h3 { margin-top: 0; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; }
+    th, td { padding: 13px 15px; border-bottom: 1px solid #edf0f5; text-align: left; font-size: 13px; }
+    th { background: #f7f8fb; color: #667189; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+    th:first-child { border-top-left-radius: 10px; }
+    th:last-child { border-top-right-radius: 10px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: #fafbfe; }
+    td { color: #475268; }
+    td a { color: var(--navy); font-weight: 650; }
+    .status-pill { display: inline-flex; padding: 5px 9px; border-radius: 18px; background: #eef1fb; color: #41578f; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .status-positive { background: #e8f6ef; color: #28744e; }
+    .status-warning { background: #fff4df; color: #946514; }
+    .status-negative { background: #fff0f0; color: #a34242; }
+    .table-wrap { width: 100%; overflow-x: auto; border: 1px solid #e9edf3; border-radius: 12px; background: #fff; box-shadow: var(--shadow); }
+    .table-wrap table { min-width: 640px; }
+    .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; padding: 14px; border: 1px solid #e9edf3; border-radius: 12px; background: #fff; box-shadow: var(--shadow); }
+    input, select, textarea { min-height: 40px; padding: 9px 12px; border: 1px solid #dfe4ed; border-radius: 8px; outline: none; background: #fff; color: var(--ink); font: inherit; font-size: 13px; }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(83,107,224,.12); }
+    button, .button { display: inline-flex; min-height: 39px; align-items: center; justify-content: center; gap: 7px; padding: 9px 15px; border: 0; border-radius: 8px; background: var(--navy); color: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    button:hover, .button:hover { background: var(--navy-dark); color: #fff; }
+    .pager { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 18px; color: var(--muted); font-size: 12px; }
+    .pager a, .back-link { font-weight: 650; }
+    .app-footer { display: flex; justify-content: space-between; gap: 15px; padding: 18px clamp(22px, 4vw, 48px); border-top: 1px solid #e5e9f0; color: #8992a4; font-size: 11px; }
+    .app-footer strong { color: #667189; font-weight: 650; }
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .detail-item { padding: 14px; border: 1px solid #edf0f5; border-radius: 9px; background: #fafbfe; }
+    .detail-label { display: block; margin-bottom: 6px; color: #8a92a3; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .detail-value { color: #354158; font-size: 13px; font-weight: 600; }
+    .form-card { max-width: 760px; }
+    .form-card form p { margin: 0 0 17px; }
+    .form-card label { display: block; margin-bottom: 6px; color: #58647a; font-size: 12px; font-weight: 650; }
+    .form-card input, .form-card select, .form-card textarea { width: 100%; }
+    .form-card textarea { min-height: 120px; resize: vertical; }
+    .form-card ul.errorlist { color: #a33434; font-size: 12px; }
+    .app-shell ~ main { max-width: none; }
+    @media (max-width: 760px) {
+      .sidebar { position: relative; top: auto; width: 100%; height: auto; flex: none; padding: 12px 14px; }
+      .app-shell { display: block; }
+      .side-brand { margin: 0 2px 10px; }
+      .side-brand img { width: 32px; height: 32px; }
+      .side-user, .side-label, .side-spacer, .side-note, .logout-form { display: none; }
+      .side-nav { display: flex; gap: 5px; overflow-x: auto; }
+      .side-nav a { flex: 0 0 auto; padding: 8px 10px; font-size: 12px; }
+      .nav-icon { width: 21px; height: 21px; }
+      .topbar { min-height: 58px; padding: 12px 18px; }
+      main { padding: 23px 17px 32px; }
+      .app-footer { padding: 15px 18px; }
+      .app-footer span:last-child { display: none; }
+    }
+    @media (max-width: 480px) {
+      .side-nav a { gap: 7px; }
+      .nav-icon { display: none; }
+      .topbar-role { font-size: 10px; }
+      .filters > input, .filters > select { flex: 1 1 100%; width: 100%; }
+      .filters > button { flex: 1; }
+      .card { padding: 16px; }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="side-brand" href="{% url 'dashboard' %}"><img src="{% static 'img/logo.avif' %}" alt=""><span>Sales AI</span></a>
+    <div class="side-user">
+      {% if user.role == 'admin' %}<img class="side-avatar" src="{% static 'img/admin.png' %}" alt="">
+      {% elif user.role == 'directeur' %}<img class="side-avatar" src="{% static 'img/directeur.jpg' %}" alt="">
+      {% elif user.role == 'sav' %}<img class="side-avatar" src="{% static 'img/sav.jpg' %}" alt="">
+      {% else %}<img class="side-avatar" src="{% static 'img/vendeur.jpg' %}" alt="">{% endif %}
+      <div class="side-user-copy"><div class="side-user-name">{{ user.username }}</div><div class="side-user-role">{{ user.get_role_display }}</div></div>
+    </div>
+    <p class="side-label">Espace de travail</p>
+    <nav class="side-nav" aria-label="Navigation principale">
+      <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="active" aria-current="page"{% endif %}><span class="nav-icon">TB</span>Tableau de bord</a>
+      <a href="{% url 'orders' %}" {% if request.resolver_match.url_name == 'orders' or request.resolver_match.url_name == 'order_detail' or request.resolver_match.url_name == 'order_new' %}class="active" aria-current="page"{% endif %}><span class="nav-icon">CO</span>Commandes</a>
+      <a href="{% url 'tickets' %}" {% if request.resolver_match.url_name == 'tickets' or request.resolver_match.url_name == 'ticket_new' or request.resolver_match.url_name == 'ticket_detail' or request.resolver_match.url_name == 'ticket_edit' or request.resolver_match.url_name == 'ticket_delete' %}class="active" aria-current="page"{% endif %}><span class="nav-icon">TI</span>Tickets</a>
+      <a href="{% url 'chat' %}" {% if request.resolver_match.url_name == 'chat' %}class="active" aria-current="page"{% endif %}><span class="nav-icon">IA</span>Assistant IA</a>
+    </nav>
+    <div class="side-spacer"></div>
+    <p class="side-note">Votre activité commerciale, réunie au même endroit.</p>
+    <form class="logout-form" method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="logout-button" type="submit"><span class="nav-icon">↗</span>Déconnexion</button></form>
+  </aside>
+  <div class="main-area">
+    <header class="topbar"><div><div class="topbar-title">{% block topbar_title %}Espace de travail{% endblock %}</div><div class="topbar-caption">{% block topbar_caption %}Bienvenue, {{ user.username }}{% endblock %}</div></div><span class="topbar-role">{{ user.get_role_display }}</span></header>
+    <main>
+{% else %}
+<main>
+{% endif %}
+{% block content %}{% endblock %}
+{% if user.is_authenticated %}
+    </main>
+    <footer class="app-footer"><span><strong>Sales AI</strong> · Pilotage commercial</span><span>Un espace clair pour suivre votre activité</span></footer>
+  </div>
+</div>
+{% else %}
+</main>
+{% endif %}
+</body>
+</html>

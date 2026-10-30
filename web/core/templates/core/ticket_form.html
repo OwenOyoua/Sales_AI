@@ -1,0 +1,15 @@
+{% extends "core/base.html" %}
+{% block title %}Ticket{% endblock %}
+{% block topbar_title %}{% if object %}Modifier un ticket{% else %}Nouveau ticket{% endif %}{% endblock %}
+{% block topbar_caption %}Renseignez les détails de la demande{% endblock %}
+{% block content %}
+<p><a class="back-link" href="{% url 'tickets' %}">← Retour aux tickets</a></p>
+<div class="page-heading"><h1>{% if object %}Modifier le ticket #{{ object.pk }}{% else %}Créer un ticket{% endif %}</h1><p>Complétez les informations pour assurer un suivi efficace.</p></div>
+<div class="card form-card">
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Enregistrer le ticket</button>
+  </form>
+</div>
+{% endblock %}

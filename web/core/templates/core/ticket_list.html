@@ -1,0 +1,106 @@
+{% extends "core/base.html" %}
+{% block title %}Tickets{% endblock %}
+{% block topbar_title %}Tickets{% endblock %}
+{% block topbar_caption %}Centralisez les demandes et leur suivi{% endblock %}
+{% block content %}
+<style>
+  .app-shell:has(.tickets-page) { height: 100vh; min-height: 0; }
+  .app-shell:has(.tickets-page) .main-area { height: 100vh; min-height: 0; overflow: hidden; }
+  .main-area:has(.tickets-page) > main { display: flex; min-height: 0; flex: 1; flex-direction: column; padding-bottom: 10px; }
+  .tickets-page { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+  .tickets-heading { margin-bottom: 17px; }
+  .tickets-heading h1 { margin: 0; color: #18233a; font-size: 27px; letter-spacing: -.04em; }
+  .tickets-heading p { margin: 6px 0 0; color: #788196; font-size: 13px; }
+  .tickets-filters { flex: 0 0 auto; }
+  .tickets-filters .button { margin-left: auto; }
+  .tickets-table { min-height: 0; flex: 1; overflow: auto; scrollbar-width: thin; scrollbar-color: #b8c4dd #f3f5f9; }
+  .tickets-table table { min-width: 820px; }
+  .tickets-table thead th { position: sticky; top: 0; z-index: 1; }
+  .tickets-pagination { display: flex; min-height: 58px; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; margin-top: 13px; padding: 9px 12px; border: 1px solid #e9edf3; border-radius: 12px; background: #fff; box-shadow: 0 5px 16px rgba(25,39,69,.05); }
+  .pagination-summary { color: #788196; font-size: 11px; white-space: nowrap; }
+  .pagination-pages { display: flex; align-items: center; gap: 5px; }
+  .pagination-link, .pagination-current, .pagination-dots { display: inline-grid; min-width: 31px; height: 31px; place-items: center; border-radius: 7px; font-size: 11px; }
+  .pagination-link { border: 1px solid #e7ebf2; background: #fff; color: #526078; font-weight: 650; }
+  .pagination-link:hover { border-color: #bac8ed; background: #f6f8ff; color: #253e8c; }
+  .pagination-current { background: #253e8c; color: #fff; font-weight: 750; }
+  .pagination-dots { color: #9aa2b1; }
+  .pagination-prev, .pagination-next { padding: 0 11px; }
+  .pagination-disabled { border-color: #edf0f5; background: #f7f8fa; color: #b2b8c4; pointer-events: none; }
+  @media (max-width: 760px) {
+    .app-shell:has(.tickets-page) { height: auto; min-height: 100vh; }
+    .app-shell:has(.tickets-page) .main-area { height: auto; min-height: calc(100vh - 104px); overflow: visible; }
+    .tickets-page { min-height: 600px; }
+    .tickets-pagination { flex-wrap: wrap; justify-content: center; padding: 10px; }
+    .pagination-summary { order: 2; width: 100%; text-align: center; }
+    .pagination-pages { gap: 3px; }
+    .pagination-link, .pagination-current, .pagination-dots { min-width: 29px; height: 29px; }
+  }
+</style>
+<section class="tickets-page">
+  <div class="page-heading tickets-heading"><h1>Tickets</h1><p>{{ page_obj.paginator.count }} demande{{ page_obj.paginator.count|pluralize }} à suivre</p></div>
+
+  <form class="filters tickets-filters" method="get">
+    <select name="status" aria-label="Filtrer par statut">
+      <option value="">Tous les statuts</option>
+      {% for value, label in statuses %}
+        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filtrer</button>
+    {% if user.role == "admin" or user.role == "sav" or user.role == "vendeur" %}
+      <a class="button" href="{% url 'ticket_new' %}">+ Nouveau ticket</a>
+    {% endif %}
+  </form>
+
+  <div class="table-wrap tickets-table"><table>
+    <thead><tr><th>#</th><th>Sujet</th><th>Statut</th><th>Priorité</th><th>Assigné à</th><th>Créé le</th></tr></thead>
+    <tbody>
+    {% for t in object_list %}
+    <tr>
+      <td><a href="{% url 'ticket_detail' t.pk %}">#{{ t.pk }}</a></td>
+      <td>{{ t.subject }}</td>
+      <td><span class="status-pill {% if t.status == 'resolved' or t.status == 'closed' %}status-positive{% elif t.status == 'in_progress' %}status-warning{% endif %}">{{ t.get_status_display }}</span></td>
+      <td><span class="status-pill {% if t.priority == 'high' %}status-negative{% endif %}">{{ t.get_priority_display }}</span></td>
+      <td>{{ t.assigned_to|default:"Nothings" }}</td>
+      <td>{{ t.created_at|date:"d/m/Y H:i" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">Aucun ticket ne correspond à ce filtre.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+
+  <nav class="tickets-pagination" aria-label="Pagination des tickets">
+    <span class="pagination-summary">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }} · {{ page_obj.paginator.count }} résultats</span>
+    <div class="pagination-pages">
+      {% if page_obj.has_previous %}
+        <a class="pagination-link pagination-prev" href="?page={{ page_obj.previous_page_number }}&amp;status={{ request.GET.status|urlencode }}" aria-label="Page précédente">← Précédent</a>
+      {% else %}
+        <span class="pagination-link pagination-prev pagination-disabled" aria-disabled="true">← Précédent</span>
+      {% endif %}
+      {% if page_obj.number > 2 %}
+        <a class="pagination-link" href="?page=1&amp;status={{ request.GET.status|urlencode }}">1</a>
+        {% if page_obj.number > 3 %}<span class="pagination-dots">…</span>{% endif %}
+      {% endif %}
+      {% for p in page_obj.paginator.page_range %}
+        {% if p >= page_obj.number|add:"-1" and p <= page_obj.number|add:"1" %}
+          {% if p == page_obj.number %}
+            <span class="pagination-current" aria-current="page">{{ p }}</span>
+          {% else %}
+            <a class="pagination-link" href="?page={{ p }}&amp;status={{ request.GET.status|urlencode }}">{{ p }}</a>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.number < page_obj.paginator.num_pages|add:"-1" %}
+        {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}<span class="pagination-dots">…</span>{% endif %}
+        <a class="pagination-link" href="?page={{ page_obj.paginator.num_pages }}&amp;status={{ request.GET.status|urlencode }}">{{ page_obj.paginator.num_pages }}</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a class="pagination-link pagination-next" href="?page={{ page_obj.next_page_number }}&amp;status={{ request.GET.status|urlencode }}" aria-label="Page suivante">Suivant →</a>
+      {% else %}
+        <span class="pagination-link pagination-next pagination-disabled" aria-disabled="true">Suivant →</span>
+      {% endif %}
+    </div>
+  </nav>
+</section>
+{% endblock %}
